@@ -5,4 +5,5 @@ go:
   - tip
 install:
   - go get -v github.com/lestrrat/go-tcptest
+  - go get -v github.com/lestrrat/go-test-mysqld
   - go get -v ./...
