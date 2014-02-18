@@ -20,19 +20,25 @@ already available :)
 
 Once you start the server, you can create a "pot" by POST-ing to 
 
+```
   http://youserver/pot/create
+```
 
 With parameters like:
 
+```
   name: NameOfYourPot
   min: MinimumIntValue
+```
 
 Of course, you can do this by hand in your MySQL server, but it's just there for
 convenience. Note: Obviously, you should NOT expose this to the outside world.
 
 After that, all you need to do is to issue GET requests to
 
+```
   http://yourserver/id/NameOfYourPot
+```
 
 and a text/plain response with just the ID in its body will be returned, which
 you can be sure that it will not be generated again from that same pot (as long
