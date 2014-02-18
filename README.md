@@ -1,6 +1,8 @@
 go-idpot
 ========
 
+[![Build Status](https://travis-ci.org/lestrrat/go-idpot.png?branch=master)](https://travis-ci.org/lestrrat/go-idpot)
+
 Layman's idpot (Serial ID Generator) Using Mysql
 
 Description
