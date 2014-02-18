@@ -4,7 +4,7 @@ import (
   "flag"
   "log"
   "code.google.com/p/gcfg"
-  "ld-git.data-hotel.net/blogng/idpot/server"
+  "github.com/lestrrat/go-idpot/server"
 )
 
 func main() {

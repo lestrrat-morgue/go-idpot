@@ -16,7 +16,7 @@ import (
   "time"
   "github.com/lestrrat/go-tcptest"
   "github.com/lestrrat/go-test-mysqld"
-  "ld-git.data-hotel.net/blogng/idpot/client"
+  "github.com/lestrrat/go-idpot/client"
 )
 
 func init () {
