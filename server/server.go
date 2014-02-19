@@ -216,7 +216,6 @@ func (s *Server) ServeNextIdFromPot(w http.ResponseWriter, r *http.Request, pot 
 }
 
 func (s *Server) ServeCreatePot(w http.ResponseWriter, r *http.Request) {
-log.Printf("%+v", r.PostForm)
   r.ParseForm()
   name := r.PostForm.Get("name")
   if name == "" {
@@ -229,12 +228,9 @@ log.Printf("%+v", r.PostForm)
 
   var min uint64
   minStr := r.PostForm.Get("min")
-log.Printf("Parsing: %s", minStr)
   if x, err := strconv.ParseUint(minStr, 10, 64); err == nil {
     min = x
   }
-log.Printf("Parsed: %s -> %d", minStr, min)
-
 
   if min < 0 {
     msg := fmt.Sprintf("Parameter 'min' is out of range: %d", min)
