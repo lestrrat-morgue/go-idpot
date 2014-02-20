@@ -135,11 +135,16 @@ ConnectString=%s
 
     wg := &sync.WaitGroup {}
     ids := make(map[uint64]bool)
-    for i := 0; i < 10; i++ {
+
+    maxGoros := 10
+    maxFetches := 10000
+
+    t0 := time.Now()
+    for i := 0; i < maxGoros; i++ {
       wg.Add(1)
       go func() {
         defer func() { wg.Done() }()
-        for j := 0; j < 100; j++ {
+        for j := 0; j < maxFetches; j++ {
           id, err := client.NextId(pot)
           if err != nil {
             t.Errorf("Failed to fetch id: %s", err)
@@ -159,6 +164,7 @@ ConnectString=%s
     }
 
     wg.Wait()
+    elapsed := time.Since(t0)
 
     // I should have 1000 ids
     count := 0
@@ -169,9 +175,11 @@ ConnectString=%s
       count++
     }
 
-    if count != 1000 {
-      t.Errorf("Did not get 1000 ids")
+    if count != maxGoros * maxFetches {
+      t.Errorf("Did not get %d ids, got %d", maxGoros * maxFetches, count)
     }
+
+    t.Logf("Fetched %d ids in %f secs (%f fetches/sec)", count, elapsed.Seconds(), float64(count) / elapsed.Seconds())
   }
 
   cmd.Process.Signal(syscall.SIGTERM)
