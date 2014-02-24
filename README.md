@@ -36,6 +36,14 @@ With parameters like:
 Of course, you can do this by hand in your MySQL server, but it's just there for
 convenience. Note: Obviously, you should NOT expose this to the outside world.
 
+You can verify that this pot has been actually created by issuing a GET request:
+
+```
+  http://yourserver/pot/NameOfYourPot
+```
+
+This will return a 204 if the pot exists, 404 otherwise.
+
 After that, all you need to do is to issue GET requests to
 
 ```
