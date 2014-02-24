@@ -166,15 +166,25 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   defer lw.EmitLog()
 
   path := r.URL.Path
-  switch {
-  case len(path) > 4 && path[0:4] == "/id/":
-    pot := path[4:]
-    s.ServeNextIdFromPot(lw, r, pot)
-  case path == "/pot/create":
-    s.ServeCreatePot(lw, r)
-  case len(path) > 5 && path[0:5] == "/pot/":
-    pot := path[5:]
-    s.ServeCheckPot(lw, r, pot)
+  switch r.Method {
+  case "GET":
+    switch {
+    case len(path) > 4 && path[0:4] == "/id/":
+      pot := path[4:]
+      s.ServeNextIdFromPot(lw, r, pot)
+    case len(path) > 5 && path[0:5] == "/pot/":
+      pot := path[5:]
+      s.ServeCheckPot(lw, r, pot)
+    default:
+      http.Error(lw, http.StatusText(404), 404)
+    }
+  case "POST":
+    switch {
+    case path == "/pot/create":
+      s.ServeCreatePot(lw, r)
+    default:
+      http.Error(lw, http.StatusText(404), 404)
+    }
   default:
     http.Error(lw, http.StatusText(404), 404)
   }
