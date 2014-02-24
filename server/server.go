@@ -172,18 +172,47 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     s.ServeNextIdFromPot(lw, r, pot)
   case path == "/pot/create":
     s.ServeCreatePot(lw, r)
+  case len(path) > 5 && path[0:5] == "/pot/":
+    pot := path[5:]
+    s.ServeCheckPot(lw, r, pot)
   default:
     http.Error(lw, http.StatusText(404), 404)
   }
 }
 
+func (s *Server) ErrorResponse(w http.ResponseWriter, code int, msg string) {
+  log.Printf(msg)
+  http.Error(w, http.StatusText(code), code)
+  io.WriteString(w, msg)
+}
+
+func (s *Server) ServeCheckPot(w http.ResponseWriter, r *http.Request, pot string) {
+  db, err := s.dbserver.Connect()
+  if err != nil {
+    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to connect to mysql server: %s", err))
+    return
+  }
+  defer db.Close()
+
+  table := fmt.Sprintf("pot_%s", pot)
+  sql := fmt.Sprintf(`SELECT 1 FROM %s`, table)
+  var ok uint32
+
+  err = db.QueryRow(sql).Scan(&ok)
+  if err != nil {
+    /* Not quite it, but PROBABLY... this pot does not exists */
+    s.ErrorResponse(w, 404, "Specified pot does not exist")
+    return
+  }
+
+  w.WriteHeader(204)
+  fmt.Fprintf(w, "%s", "Specified pot exists")
+}
+
 func (s *Server) ServeNextIdFromPot(w http.ResponseWriter, r *http.Request, pot string) {
   db, err := s.dbserver.Connect()
   if err != nil {
-    msg := fmt.Sprintf("Failed to connect to mysql server: %s", err)
-    log.Printf(msg)
-    http.Error(w, http.StatusText(500), 500)
-    io.WriteString(w, msg)
+    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to connect to mysql server: %s", err))
     return
   }
   defer db.Close()
@@ -194,10 +223,7 @@ func (s *Server) ServeNextIdFromPot(w http.ResponseWriter, r *http.Request, pot 
   updateSQL := fmt.Sprintf(`UPDATE %s SET id = LAST_INSERT_ID(id + 1)`, table)
   _, err = db.Exec(updateSQL)
   if err != nil {
-    msg := fmt.Sprintf("Failed to update table %s: %s", table, err)
-    log.Printf(msg)
-    http.Error(w, http.StatusText(500), 500)
-    io.WriteString(w, msg)
+    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to update table %s: %s", table, err))
     return
   }
 
@@ -205,10 +231,7 @@ func (s *Server) ServeNextIdFromPot(w http.ResponseWriter, r *http.Request, pot 
   var id uint64
   err = db.QueryRow(fetchSQL).Scan(&id)
   if err != nil {
-    msg := fmt.Sprintf("Failed to fetch last insert id for table %s: %s", table, err)
-    log.Printf(msg)
-    http.Error(w, http.StatusText(500), 500)
-    io.WriteString(w, msg)
+    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to fetch last insert id for table %s: %s", table, err))
     return
   }
 
@@ -219,10 +242,7 @@ func (s *Server) ServeCreatePot(w http.ResponseWriter, r *http.Request) {
   r.ParseForm()
   name := r.PostForm.Get("name")
   if name == "" {
-    msg := "Required parameter 'name' not provided"
-    log.Printf(msg)
-    http.Error(w, http.StatusText(500), 500)
-    io.WriteString(w, msg)
+    s.ErrorResponse(w, 500, "Required parameter 'name' not provided")
     return
   }
 
@@ -242,10 +262,7 @@ func (s *Server) ServeCreatePot(w http.ResponseWriter, r *http.Request) {
 
   db, err := s.dbserver.Connect()
   if err != nil {
-    msg := fmt.Sprintf("Failed to connect to mysql server: %s", err)
-    log.Printf(msg)
-    http.Error(w, http.StatusText(500), 500)
-    io.WriteString(w, msg)
+    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to connect to mysql server: %s", err))
     return
   }
   defer db.Close()
@@ -255,8 +272,7 @@ func (s *Server) ServeCreatePot(w http.ResponseWriter, r *http.Request) {
   var gotLock uint32
   err = db.QueryRow(`SELECT GET_LOCK(?, 30)`, table).Scan(&gotLock)
   if err != nil || gotLock != 1 {
-    log.Printf("Failed to acquire lock for table %s", table)
-    http.Error(w, http.StatusText(500), 500)
+    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to acquire lock for table %s", table))
     return
   }
   lockReleased := false
@@ -272,18 +288,16 @@ func (s *Server) ServeCreatePot(w http.ResponseWriter, r *http.Request) {
   createSQL := fmt.Sprintf(`CREATE TABLE %s (id BIGINT UNSIGNED NOT NULL) ENGINE=MyISAM`, table)
   _, err = db.Exec(createSQL)
   if err != nil {
-    log.Printf("Failed to create table %s: %s", table, err)
-    http.Error(w, http.StatusText(500), 500)
+    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to create table %s: %s", table, err))
     return
   }
 
   insertSQL := fmt.Sprintf(`INSERT INTO %s (id) VALUES (?)`, table)
   _, err = db.Exec(insertSQL, min)
   if err != nil {
-    log.Printf("Failed to insert %s: %s", table, err)
+    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to insert %s: %s", table, err))
     // Fuck, drop the table
     db.Exec(fmt.Sprintf(`DROP TABLE %s`, table))
-    http.Error(w, http.StatusText(500), 500)
     return
   }
 
