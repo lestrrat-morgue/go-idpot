@@ -44,7 +44,7 @@ You can verify that this pot has been actually created by issuing a GET request:
 
 This will return a 204 if the pot exists, 404 otherwise.
 
-After that, all you need to do is to issue GET requests to
+After that, all you need to do is to issue POST requests to
 
 ```
   http://yourserver/id/NameOfYourPot
@@ -52,7 +52,11 @@ After that, all you need to do is to issue GET requests to
 
 and a text/plain response with just the ID in its body will be returned, which
 you can be sure that it will not be generated again from that same pot (as long
-as you don't manually muck witht he backend DB)
+as you don't manually muck with the backend DB)
+
+If you just want to get the current value (which can only be needed for
+admin purposes), then you can issue a GET request to the same URL, and you
+will get the current ID, and it won't be automatically incremented
 
 Building
 ========

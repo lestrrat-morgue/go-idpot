@@ -33,13 +33,27 @@ func (c *Client) CreatePot(pot string, min uint64) error {
   return nil
 }
 
-func (c *Client) NextId(pot string) (uint64, error) {
+func (c *Client) CurrentId(pot string) (uint64, error) {
   uri := fmt.Sprintf("%s/id/%s", c.baseURL, pot)
   res, err := http.Get(uri)
   if err != nil {
     return 0, err
   }
 
+  return c.processIdResponse(res)
+}
+
+func (c *Client) NextId(pot string) (uint64, error) {
+  uri := fmt.Sprintf("%s/id/%s", c.baseURL, pot)
+  res, err := http.Post(uri, "text/plain", nil)
+  if err != nil {
+    return 0, err
+  }
+
+  return c.processIdResponse(res)
+}
+
+func (c *Client) processIdResponse(res *http.Response) (uint64, error) {
   if res.StatusCode != 200 {
     return 0, errors.New(
       fmt.Sprintf("Expected status code 200, got %d", res.StatusCode),

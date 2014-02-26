@@ -9,6 +9,7 @@ import (
   "os"
   "os/exec"
   "runtime"
+  "strconv"
   "strings"
   "sync"
   "syscall"
@@ -54,6 +55,20 @@ func buildCommandLineTools() {
       os.Getenv("PATH"),
     }, ":",),
   )
+}
+
+func getMaxFetches() int {
+  const defaultMaxFetches int = 10000
+  maxFetchesStr := os.Getenv("IDPOT_MAX_FETCHES")
+  if maxFetchesStr == "" {
+    return defaultMaxFetches
+  }
+
+  n, err := strconv.ParseInt(maxFetchesStr, 10, 64)
+  if err != nil {
+    return defaultMaxFetches
+  }
+  return int(n)
 }
 
 func TestServer(t *testing.T) {
@@ -137,7 +152,7 @@ ConnectString=%s
     ids := make(map[uint64]bool)
 
     maxGoros := 10
-    maxFetches := 10000
+    maxFetches := getMaxFetches()
 
     t0 := time.Now()
     for i := 0; i < maxGoros; i++ {
@@ -180,7 +195,24 @@ ConnectString=%s
     }
 
     t.Logf("Fetched %d ids in %f secs (%f fetches/sec)", count, elapsed.Seconds(), float64(count) / elapsed.Seconds())
+
+    /* Now test client.CurrentId(), make sure that the id does not change */
+    id, err := client.CurrentId(pot)
+    if err != nil {
+      t.Fatalf("Failed to call CurrentId: %s", err)
+    }
+    for i := 0; i < maxFetches; i++ {
+      newId, err := client.CurrentId(pot)
+      if err != nil {
+        t.Fatalf("Failed to call CurrentId: %s", err)
+      }
+      if id != newId {
+        t.Errorf("CurrentId returned different id. Got %d, expected %d", newId, id)
+      }
+    }
   }
+
+
 
   cmd.Process.Signal(syscall.SIGTERM)
   server.Wait()

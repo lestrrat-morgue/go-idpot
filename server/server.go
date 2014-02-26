@@ -171,7 +171,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     switch {
     case len(path) > 4 && path[0:4] == "/id/":
       pot := path[4:]
-      s.ServeNextIdFromPot(lw, r, pot)
+      s.ServeCurrentIdFromPot(lw, r, pot)
     case len(path) > 5 && path[0:5] == "/pot/":
       pot := path[5:]
       s.ServeCheckPot(lw, r, pot)
@@ -180,6 +180,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     }
   case "POST":
     switch {
+    case len(path) > 4 && path[0:4] == "/id/":
+      pot := path[4:]
+      s.ServeNextIdFromPot(lw, r, pot)
     case path == "/pot/create":
       s.ServeCreatePot(lw, r)
     default:
@@ -217,6 +220,25 @@ func (s *Server) ServeCheckPot(w http.ResponseWriter, r *http.Request, pot strin
 
   w.WriteHeader(204)
   fmt.Fprintf(w, "%s", "Specified pot exists")
+}
+
+func (s *Server) ServeCurrentIdFromPot(w http.ResponseWriter, r *http.Request, pot string) {
+  db, err := s.dbserver.Connect()
+  if err != nil {
+    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to connect to mysql server: %s", err))
+    return
+  }
+  defer db.Close()
+
+  table := fmt.Sprintf("pot_%s", pot)
+
+  var id uint64
+  err = db.QueryRow(fmt.Sprintf(`SELECT id FROM %s`, table)).Scan(&id)
+  if err != nil {
+    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to fetch current id for table %s: %s", table, err))
+    return
+  }
+  fmt.Fprintf(w, "%d", id)
 }
 
 func (s *Server) ServeNextIdFromPot(w http.ResponseWriter, r *http.Request, pot string) {
