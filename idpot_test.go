@@ -42,7 +42,7 @@ func randomName() string {
 
 func buildCommandLineTools() {
   // compile command
-  cmd := exec.Command("go", "build", "-o", "bin/idpot-server", "cli/idpot-server.go")
+  cmd := exec.Command("go", "build", "-o", "bin/idpot-server", "cli/idpot-server/idpot-server.go")
   err := cmd.Run()
   if err != nil {
     panic(fmt.Sprintf("Failed to compile idpot-server: %s", err))
