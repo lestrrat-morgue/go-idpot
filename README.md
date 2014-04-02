@@ -58,8 +58,16 @@ If you just want to get the current value (which can only be needed for
 admin purposes), then you can issue a GET request to the same URL, and you
 will get the current ID, and it won't be automatically incremented
 
-Building
+Building/Installing
 ========
+
+Just install the server binary:
+
+```
+  go install cli/idpot-server/idpot-server.go
+```
+
+Or build it manually:
 
 ```
   go build -o idpot-server cli/idpot-server/idpot-server.go
