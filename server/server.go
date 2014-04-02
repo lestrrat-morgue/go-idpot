@@ -15,6 +15,7 @@ import (
   _ "github.com/go-sql-driver/mysql" // dhu
 )
 
+// MysqlServer represents a MySQL server
 type MysqlServer struct {
   ConnectString string
   Hostname  string
@@ -24,6 +25,8 @@ type MysqlServer struct {
   Dbname    string
 }
 
+// FormatDSN takes all the parameters in the MysqlServer instance and creates a valid
+// DSN to be passed to sql.Open()
 func (s *MysqlServer) FormatDSN() string {
   if s.ConnectString != "" {
     return s.ConnectString
@@ -39,6 +42,7 @@ func (s *MysqlServer) FormatDSN() string {
   )
 }
 
+// Connect establishes a new connection
 func (s *MysqlServer) Connect() (*sql.DB, error) {
   dsn := s.FormatDSN()
   db, err := sql.Open("mysql", dsn)
@@ -51,6 +55,7 @@ func (s *MysqlServer) Connect() (*sql.DB, error) {
   return db, nil
 }
 
+// Server handles the incoming HTTP connection
 type Server struct {
   listen      string
   logger      *apachelog.ApacheLog
@@ -58,6 +63,7 @@ type Server struct {
   dbserver    *MysqlServer
 }
 
+// ServerOpts is used to configure the Server
 type ServerOpts struct {
   Listen string
   LogFile string
@@ -65,6 +71,7 @@ type ServerOpts struct {
   Mysql *MysqlServer
 }
 
+// New creates a new Server using the given ServerOpts
 func New(opts *ServerOpts) (*Server) {
   dbserver := &MysqlServer {
     Hostname: "127.0.0.1",
@@ -119,6 +126,7 @@ func New(opts *ServerOpts) (*Server) {
   }
 }
 
+// Start setarts the server
 func (s *Server) Start() {
   defer func() {
     if rl := s.rotatelogs; rl != nil {
@@ -157,6 +165,7 @@ func (s *Server) Start() {
   }
 }
 
+// ServeHTTP handles the HTTP requests
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   // Wrap w so that we can capture header's sent and stuff
   lw := apachelog.NewLoggingWriter(w, r, s.logger)
@@ -168,10 +177,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     switch {
     case len(path) > 4 && path[0:4] == "/id/":
       pot := path[4:]
-      s.ServeCurrentIDFromPot(lw, r, pot)
+      s.serveCurrentIDFromPot(lw, r, pot)
     case len(path) > 5 && path[0:5] == "/pot/":
       pot := path[5:]
-      s.ServeCheckPot(lw, r, pot)
+      s.serveCheckPot(lw, r, pot)
     default:
       http.Error(lw, http.StatusText(404), 404)
     }
@@ -179,9 +188,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     switch {
     case len(path) > 4 && path[0:4] == "/id/":
       pot := path[4:]
-      s.ServeNextIDFromPot(lw, r, pot)
+      s.serveNextIDFromPot(lw, r, pot)
     case path == "/pot/create":
-      s.ServeCreatePot(lw, r)
+      s.serveCreatePot(lw, r)
     default:
       http.Error(lw, http.StatusText(404), 404)
     }
@@ -190,16 +199,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   }
 }
 
-func (s *Server) ErrorResponse(w http.ResponseWriter, code int, msg string) {
+func (s *Server) errorResponse(w http.ResponseWriter, code int, msg string) {
   log.Printf(msg)
   http.Error(w, http.StatusText(code), code)
   io.WriteString(w, msg)
 }
 
-func (s *Server) ServeCheckPot(w http.ResponseWriter, r *http.Request, pot string) {
+func (s *Server) serveCheckPot(w http.ResponseWriter, r *http.Request, pot string) {
   db, err := s.dbserver.Connect()
   if err != nil {
-    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to connect to mysql server: %s", err))
+    s.errorResponse(w, 500, fmt.Sprintf("Failed to connect to mysql server: %s", err))
     return
   }
   defer db.Close()
@@ -211,7 +220,7 @@ func (s *Server) ServeCheckPot(w http.ResponseWriter, r *http.Request, pot strin
   err = db.QueryRow(sql).Scan(&ok)
   if err != nil {
     /* Not quite it, but PROBABLY... this pot does not exists */
-    s.ErrorResponse(w, 404, "Specified pot does not exist")
+    s.errorResponse(w, 404, "Specified pot does not exist")
     return
   }
 
@@ -219,10 +228,10 @@ func (s *Server) ServeCheckPot(w http.ResponseWriter, r *http.Request, pot strin
   fmt.Fprintf(w, "%s", "Specified pot exists")
 }
 
-func (s *Server) ServeCurrentIDFromPot(w http.ResponseWriter, r *http.Request, pot string) {
+func (s *Server) serveCurrentIDFromPot(w http.ResponseWriter, r *http.Request, pot string) {
   db, err := s.dbserver.Connect()
   if err != nil {
-    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to connect to mysql server: %s", err))
+    s.errorResponse(w, 500, fmt.Sprintf("Failed to connect to mysql server: %s", err))
     return
   }
   defer db.Close()
@@ -232,16 +241,16 @@ func (s *Server) ServeCurrentIDFromPot(w http.ResponseWriter, r *http.Request, p
   var id uint64
   err = db.QueryRow(fmt.Sprintf(`SELECT id FROM %s`, table)).Scan(&id)
   if err != nil {
-    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to fetch current id for table %s: %s", table, err))
+    s.errorResponse(w, 500, fmt.Sprintf("Failed to fetch current id for table %s: %s", table, err))
     return
   }
   fmt.Fprintf(w, "%d", id)
 }
 
-func (s *Server) ServeNextIDFromPot(w http.ResponseWriter, r *http.Request, pot string) {
+func (s *Server) serveNextIDFromPot(w http.ResponseWriter, r *http.Request, pot string) {
   db, err := s.dbserver.Connect()
   if err != nil {
-    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to connect to mysql server: %s", err))
+    s.errorResponse(w, 500, fmt.Sprintf("Failed to connect to mysql server: %s", err))
     return
   }
   defer db.Close()
@@ -252,7 +261,7 @@ func (s *Server) ServeNextIDFromPot(w http.ResponseWriter, r *http.Request, pot 
   updateSQL := fmt.Sprintf(`UPDATE %s SET id = LAST_INSERT_ID(id + 1)`, table)
   _, err = db.Exec(updateSQL)
   if err != nil {
-    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to update table %s: %s", table, err))
+    s.errorResponse(w, 500, fmt.Sprintf("Failed to update table %s: %s", table, err))
     return
   }
 
@@ -260,18 +269,18 @@ func (s *Server) ServeNextIDFromPot(w http.ResponseWriter, r *http.Request, pot 
   var id uint64
   err = db.QueryRow(fetchSQL).Scan(&id)
   if err != nil {
-    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to fetch last insert id for table %s: %s", table, err))
+    s.errorResponse(w, 500, fmt.Sprintf("Failed to fetch last insert id for table %s: %s", table, err))
     return
   }
 
   fmt.Fprintf(w, "%d", id)
 }
 
-func (s *Server) ServeCreatePot(w http.ResponseWriter, r *http.Request) {
+func (s *Server) serveCreatePot(w http.ResponseWriter, r *http.Request) {
   r.ParseForm()
   name := r.PostForm.Get("name")
   if name == "" {
-    s.ErrorResponse(w, 500, "Required parameter 'name' not provided")
+    s.errorResponse(w, 500, "Required parameter 'name' not provided")
     return
   }
 
@@ -291,7 +300,7 @@ func (s *Server) ServeCreatePot(w http.ResponseWriter, r *http.Request) {
 
   db, err := s.dbserver.Connect()
   if err != nil {
-    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to connect to mysql server: %s", err))
+    s.errorResponse(w, 500, fmt.Sprintf("Failed to connect to mysql server: %s", err))
     return
   }
   defer db.Close()
@@ -301,7 +310,7 @@ func (s *Server) ServeCreatePot(w http.ResponseWriter, r *http.Request) {
   var gotLock uint32
   err = db.QueryRow(`SELECT GET_LOCK(?, 30)`, table).Scan(&gotLock)
   if err != nil || gotLock != 1 {
-    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to acquire lock for table %s", table))
+    s.errorResponse(w, 500, fmt.Sprintf("Failed to acquire lock for table %s", table))
     return
   }
   lockReleased := false
@@ -317,14 +326,14 @@ func (s *Server) ServeCreatePot(w http.ResponseWriter, r *http.Request) {
   createSQL := fmt.Sprintf(`CREATE TABLE %s (id BIGINT UNSIGNED NOT NULL) ENGINE=MyISAM`, table)
   _, err = db.Exec(createSQL)
   if err != nil {
-    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to create table %s: %s", table, err))
+    s.errorResponse(w, 500, fmt.Sprintf("Failed to create table %s: %s", table, err))
     return
   }
 
   insertSQL := fmt.Sprintf(`INSERT INTO %s (id) VALUES (?)`, table)
   _, err = db.Exec(insertSQL, min)
   if err != nil {
-    s.ErrorResponse(w, 500, fmt.Sprintf("Failed to insert %s: %s", table, err))
+    s.errorResponse(w, 500, fmt.Sprintf("Failed to insert %s: %s", table, err))
     // Fuck, drop the table
     db.Exec(fmt.Sprintf(`DROP TABLE %s`, table))
     return

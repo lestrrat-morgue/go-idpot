@@ -8,14 +8,17 @@ import (
   "strconv"
 )
 
+// Client talks to the idpot server to fetch IDs
 type Client struct {
   baseURL string
 }
 
+// New creates a new Client. You must pass a valid idpot server URL
 func New(base string) *Client {
   return &Client { base }
 }
 
+// CreatePot takes a pot name, and a minimum ID value
 func (c *Client) CreatePot(pot string, min uint64) error {
   uri := fmt.Sprintf("%s/pot/create", c.baseURL)
   res, err := http.PostForm(uri, url.Values { "name": {pot}, "min": {fmt.Sprintf("%d", min)} })
@@ -30,6 +33,7 @@ func (c *Client) CreatePot(pot string, min uint64) error {
   return nil
 }
 
+// CurrentID queries the server for the current ID for pot named `pot`
 func (c *Client) CurrentID(pot string) (uint64, error) {
   uri := fmt.Sprintf("%s/id/%s", c.baseURL, pot)
   res, err := http.Get(uri)
@@ -40,6 +44,7 @@ func (c *Client) CurrentID(pot string) (uint64, error) {
   return c.processIDResponse(res)
 }
 
+// NextID fetches the next ID for pot `pot` from the server
 func (c *Client) NextID(pot string) (uint64, error) {
   uri := fmt.Sprintf("%s/id/%s", c.baseURL, pot)
   res, err := http.Post(uri, "text/plain", nil)
@@ -70,12 +75,3 @@ func (c *Client) processIDResponse(res *http.Response) (uint64, error) {
   return id, nil
 }
 
-/*
-
-User sends a request like this:
-
-  GET http://app101.idpot.blog-new.xen/id/$table_name
-
-to which a simple text response containing a numerical ID is returned
-
-*/
