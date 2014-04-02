@@ -62,7 +62,7 @@ Building
 ========
 
 ```
-  go build -o idpot-server cli/idpot-server.go
+  go build -o idpot-server cli/idpot-server/idpot-server.go
 ```
 
 Using idpot-server
