@@ -2,7 +2,6 @@ package server
 
 import (
   "database/sql"
-  "errors"
   "fmt"
   "io"
   "log"
@@ -13,7 +12,7 @@ import (
   "github.com/lestrrat/go-file-rotatelogs"
   "github.com/lestrrat/go-server-starter-listener"
   "github.com/lestrrat/go-apache-logformat"
-  _ "github.com/go-sql-driver/mysql"
+  _ "github.com/go-sql-driver/mysql" // dhu
 )
 
 type MysqlServer struct {
@@ -44,11 +43,9 @@ func (s *MysqlServer) Connect() (*sql.DB, error) {
   dsn := s.FormatDSN()
   db, err := sql.Open("mysql", dsn)
   if err != nil {
-    return nil, errors.New(
-      fmt.Sprintf(
-        "Error connecting to mysql database: %s",
-        err,
-      ),
+    return nil, fmt.Errorf(
+      "error connecting to mysql database: %s",
+      err,
     )
   }
   return db, nil
@@ -171,7 +168,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     switch {
     case len(path) > 4 && path[0:4] == "/id/":
       pot := path[4:]
-      s.ServeCurrentIdFromPot(lw, r, pot)
+      s.ServeCurrentIDFromPot(lw, r, pot)
     case len(path) > 5 && path[0:5] == "/pot/":
       pot := path[5:]
       s.ServeCheckPot(lw, r, pot)
@@ -182,7 +179,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     switch {
     case len(path) > 4 && path[0:4] == "/id/":
       pot := path[4:]
-      s.ServeNextIdFromPot(lw, r, pot)
+      s.ServeNextIDFromPot(lw, r, pot)
     case path == "/pot/create":
       s.ServeCreatePot(lw, r)
     default:
@@ -222,7 +219,7 @@ func (s *Server) ServeCheckPot(w http.ResponseWriter, r *http.Request, pot strin
   fmt.Fprintf(w, "%s", "Specified pot exists")
 }
 
-func (s *Server) ServeCurrentIdFromPot(w http.ResponseWriter, r *http.Request, pot string) {
+func (s *Server) ServeCurrentIDFromPot(w http.ResponseWriter, r *http.Request, pot string) {
   db, err := s.dbserver.Connect()
   if err != nil {
     s.ErrorResponse(w, 500, fmt.Sprintf("Failed to connect to mysql server: %s", err))
@@ -241,7 +238,7 @@ func (s *Server) ServeCurrentIdFromPot(w http.ResponseWriter, r *http.Request, p
   fmt.Fprintf(w, "%d", id)
 }
 
-func (s *Server) ServeNextIdFromPot(w http.ResponseWriter, r *http.Request, pot string) {
+func (s *Server) ServeNextIDFromPot(w http.ResponseWriter, r *http.Request, pot string) {
   db, err := s.dbserver.Connect()
   if err != nil {
     s.ErrorResponse(w, 500, fmt.Sprintf("Failed to connect to mysql server: %s", err))

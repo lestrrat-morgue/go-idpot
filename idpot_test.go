@@ -160,7 +160,7 @@ ConnectString=%s
       go func() {
         defer func() { wg.Done() }()
         for j := 0; j < maxFetches; j++ {
-          id, err := client.NextId(pot)
+          id, err := client.NextID(pot)
           if err != nil {
             t.Errorf("Failed to fetch id: %s", err)
             continue
@@ -183,9 +183,9 @@ ConnectString=%s
 
     // I should have 1000 ids
     count := 0
-    for v, _ := range ids {
+    for v := range ids {
       if v < min {
-        t.Errorf("Id given is out of range: %d (wanted > %d)", v, min)
+        t.Errorf("error: ID given is out of range: %d (wanted > %d)", v, min)
       }
       count++
     }
@@ -197,17 +197,17 @@ ConnectString=%s
     t.Logf("Fetched %d ids in %f secs (%f fetches/sec)", count, elapsed.Seconds(), float64(count) / elapsed.Seconds())
 
     /* Now test client.CurrentId(), make sure that the id does not change */
-    id, err := client.CurrentId(pot)
+    id, err := client.CurrentID(pot)
     if err != nil {
-      t.Fatalf("Failed to call CurrentId: %s", err)
+      t.Fatalf("Failed to call CurrentID: %s", err)
     }
     for i := 0; i < maxFetches; i++ {
-      newId, err := client.CurrentId(pot)
+      newID, err := client.CurrentID(pot)
       if err != nil {
-        t.Fatalf("Failed to call CurrentId: %s", err)
+        t.Fatalf("Failed to call CurrentID: %s", err)
       }
-      if id != newId {
-        t.Errorf("CurrentId returned different id. Got %d, expected %d", newId, id)
+      if id != newID {
+        t.Errorf("CurrentID returned different id. Got %d, expected %d", newID, id)
       }
     }
   }

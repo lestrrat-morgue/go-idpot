@@ -1,7 +1,6 @@
 package client
 
 import (
-  "errors"
   "fmt"
   "io/ioutil"
   "net/http"
@@ -25,39 +24,35 @@ func (c *Client) CreatePot(pot string, min uint64) error {
   }
 
   if res.StatusCode != 201 {
-    return errors.New(
-      fmt.Sprintf("Expected status code 201, got %d", res.StatusCode),
-    )
+    return fmt.Errorf("expected status code 201, got %d", res.StatusCode)
   }
 
   return nil
 }
 
-func (c *Client) CurrentId(pot string) (uint64, error) {
+func (c *Client) CurrentID(pot string) (uint64, error) {
   uri := fmt.Sprintf("%s/id/%s", c.baseURL, pot)
   res, err := http.Get(uri)
   if err != nil {
     return 0, err
   }
 
-  return c.processIdResponse(res)
+  return c.processIDResponse(res)
 }
 
-func (c *Client) NextId(pot string) (uint64, error) {
+func (c *Client) NextID(pot string) (uint64, error) {
   uri := fmt.Sprintf("%s/id/%s", c.baseURL, pot)
   res, err := http.Post(uri, "text/plain", nil)
   if err != nil {
     return 0, err
   }
 
-  return c.processIdResponse(res)
+  return c.processIDResponse(res)
 }
 
-func (c *Client) processIdResponse(res *http.Response) (uint64, error) {
+func (c *Client) processIDResponse(res *http.Response) (uint64, error) {
   if res.StatusCode != 200 {
-    return 0, errors.New(
-      fmt.Sprintf("Expected status code 200, got %d", res.StatusCode),
-    )
+    return 0, fmt.Errorf("expected status code 200, got %d", res.StatusCode)
   }
 
   // Grab the response
